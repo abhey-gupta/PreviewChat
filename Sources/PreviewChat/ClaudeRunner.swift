@@ -11,22 +11,30 @@ final class ClaudeRunner {
 
     private var process: Process?
 
-    /// PATH from the user's login shell, so nvm/homebrew installs of `claude` resolve in a GUI app.
-    static let shellPath: String = {
+    /// Environment of the user's interactive login shell. GUI apps don't source ~/.zshrc, which is
+    /// where nvm (PATH to `claude`) and CLAUDE_CODE_OAUTH_TOKEN (subscription auth) are set up.
+    static let shellEnv: [String: String] = {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        p.arguments = ["-ilc", "echo __PATH__$PATH__PATH__"]
+        p.arguments = ["-ilc", "printf __ENV__; env -0; printf __ENV__"]
         let out = Pipe()
         p.standardOutput = out
         p.standardError = FileHandle.nullDevice
         p.standardInput = FileHandle.nullDevice
         try? p.run()
+        let data = out.fileHandleForReading.readDataToEndOfFile()
         p.waitUntilExit()
-        let s = String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        if let r = s.range(of: "__PATH__"), let e = s.range(of: "__PATH__", range: r.upperBound..<s.endIndex) {
-            return String(s[r.upperBound..<e.lowerBound])
+        let s = String(decoding: data, as: UTF8.self)
+        guard let r = s.range(of: "__ENV__"), let e = s.range(of: "__ENV__", options: .backwards),
+              r.upperBound <= e.lowerBound else {
+            return ["PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(NSHomeDirectory())/.local/bin"]
         }
-        return "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(NSHomeDirectory())/.local/bin"
+        var env: [String: String] = [:]
+        for entry in s[r.upperBound..<e.lowerBound].split(separator: "\0") {
+            guard let eq = entry.firstIndex(of: "=") else { continue }
+            env[String(entry[..<eq])] = String(entry[entry.index(after: eq)...])
+        }
+        return env
     }()
 
     static let workDir: URL = {
@@ -57,8 +65,7 @@ final class ClaudeRunner {
         p.arguments = args
         p.currentDirectoryURL = Self.workDir
 
-        var env = ProcessInfo.processInfo.environment
-        env["PATH"] = Self.shellPath
+        var env = ProcessInfo.processInfo.environment.merging(Self.shellEnv) { _, shell in shell }
         // Force subscription (OAuth) auth instead of per-token API billing.
         for k in ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"] { env[k] = nil }
         p.environment = env

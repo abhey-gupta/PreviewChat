@@ -28,7 +28,7 @@ final class ChatStore: ObservableObject {
     var messages: [Message] { document.flatMap { conversations[$0.url]?.messages } ?? [] }
 
     init() {
-        _ = ClaudeRunner.shellPath // resolve early, off the first send
+        _ = ClaudeRunner.shellEnv // resolve early, off the first send
         poll()
         timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
