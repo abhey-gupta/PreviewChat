@@ -37,7 +37,6 @@ struct ChatView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
-            .scrollEdgeEffectStyle(.soft, for: .all)
             .defaultScrollAnchor(.bottom)
             .safeAreaInset(edge: .top, spacing: 0) { header(doc) }
             .safeAreaInset(edge: .bottom, spacing: 0) { composer }
@@ -71,6 +70,8 @@ struct ChatView: View {
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
         }
+        .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
     }
 
     private var modelMenu: some View {
@@ -194,6 +195,8 @@ struct ChatView: View {
             }
             .padding(.horizontal, 12).padding(.vertical, 10)
         }
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
         .animation(.smooth(duration: 0.2), value: store.busy)
     }
 
