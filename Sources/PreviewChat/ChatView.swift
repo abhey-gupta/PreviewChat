@@ -17,6 +17,7 @@ struct ChatView: View {
                 inputBar
             }
         }
+        .background(Color(nsColor: .windowBackgroundColor))
         .onAppear { store.poll(); focused = true }
     }
 
@@ -117,21 +118,26 @@ struct MessageRow: View {
     var body: some View {
         HStack {
             if message.role == .user { Spacer(minLength: 40) }
-            Text(rendered)
+            content
                 .textSelection(.enabled)
-                .padding(8)
+                .padding(10)
                 .background(background, in: RoundedRectangle(cornerRadius: 10))
-                .foregroundStyle(message.isError ? .red : .primary)
-            if message.role == .assistant { Spacer(minLength: 20) }
+                .foregroundStyle(message.isError ? Color.red : Color.primary)
+            if message.role == .assistant { Spacer(minLength: 0) }
+        }
+    }
+
+    @ViewBuilder private var content: some View {
+        if message.role == .assistant && !message.isError {
+            MarkdownView(text: message.text)
+        } else {
+            Text(message.text)
         }
     }
 
     private var background: Color {
-        message.role == .user ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.1)
-    }
-
-    private var rendered: AttributedString {
-        let opts = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        return (try? AttributedString(markdown: message.text, options: opts)) ?? AttributedString(message.text)
+        message.role == .user
+            ? Color.accentColor.opacity(0.22)
+            : Color(nsColor: .controlBackgroundColor)
     }
 }
