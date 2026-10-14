@@ -104,7 +104,14 @@ enum MarkdownBlock {
                 while i < lines.count, !lines[i].trimmingCharacters(in: .whitespaces).hasPrefix("```") {
                     code.append(lines[i]); i += 1
                 }
-                blocks.append(.code(code.joined(separator: "\n")))
+                let lang = t.dropFirst(3).trimmingCharacters(in: .whitespaces).lowercased()
+                let body = code.joined(separator: "\n")
+                // Claude sometimes fences LaTeX; render it as math instead of source.
+                if ["latex", "math", "tex", "katex"].contains(lang) || (lang.isEmpty && LaTeX.looksLikeMath(body)) {
+                    blocks.append(.math(body))
+                } else {
+                    blocks.append(.code(body))
+                }
                 i += 1
                 continue
             }

@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct PreviewChatApp: App {
     @StateObject private var store = ChatStore()
+
     @AppStorage(Prefs.layoutKey) private var layout = PanelLayout.portrait
 
     var body: some Scene {

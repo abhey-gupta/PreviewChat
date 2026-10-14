@@ -49,7 +49,7 @@ final class ClaudeRunner {
         Its extracted text is given in <document> tags in the first message. Answer questions about it concisely, \
         cite page numbers like (p. 4) when useful, and use Markdown. \
         Write math in LaTeX: inline as $...$, display equations as $$...$$ on their own lines. \
-        Never use $ for currency (write USD). If the extracted text is missing, truncated, \
+        Never put math in code blocks or backticks, and never use $ for currency (write USD). If the extracted text is missing, truncated, \
         or a question concerns figures/tables/scans, use the Read tool on the PDF path (with the pages parameter for large files).
         """
 
