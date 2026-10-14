@@ -70,7 +70,8 @@ struct ChatView: View {
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
         }
-        .background { ProgressiveBlur(edge: .top).padding(.bottom, -32) }
+        .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
     }
 
     private var modelMenu: some View {
@@ -194,7 +195,8 @@ struct ChatView: View {
             }
             .padding(.horizontal, 12).padding(.vertical, 10)
         }
-        .background { ProgressiveBlur(edge: .bottom).padding(.top, -32) }
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
         .animation(.smooth(duration: 0.2), value: store.busy)
     }
 
@@ -299,32 +301,5 @@ struct ThinkingIndicator: View {
                 } animation: { _ in .easeInOut(duration: 0.8) }
         }
         .font(.callout)
-    }
-}
-
-/// Approximates a variable blur: stacked materials, each fading out over a shorter distance,
-/// so blur is strongest at the edge and tapers off into the content.
-struct ProgressiveBlur: View {
-    let edge: VerticalEdge
-
-    var body: some View {
-        ZStack {
-            layer(.ultraThinMaterial, fadeEnd: 1.0)
-            layer(.thinMaterial, fadeEnd: 0.75)
-            layer(.regularMaterial, fadeEnd: 0.5)
-        }
-        .allowsHitTesting(false)
-    }
-
-    private func layer(_ material: Material, fadeEnd: CGFloat) -> some View {
-        Rectangle()
-            .fill(material)
-            .mask {
-                LinearGradient(stops: [
-                    .init(color: .black, location: 0),
-                    .init(color: .black, location: fadeEnd * 0.55),
-                    .init(color: .clear, location: fadeEnd),
-                ], startPoint: edge == .top ? .top : .bottom, endPoint: edge == .top ? .bottom : .top)
-            }
     }
 }
