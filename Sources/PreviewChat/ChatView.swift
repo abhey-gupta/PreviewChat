@@ -5,6 +5,7 @@ struct ChatView: View {
     @Environment(\.openSettings) private var openSettings
     @AppStorage(Prefs.sizeKey) private var fontSize = Prefs.defaultSize
     @State private var input = ""
+    @State private var scrolled = false
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -16,7 +17,7 @@ struct ChatView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background { VisualEffectBackground().overlay(Color.black.opacity(0.25)) }
+        .background { PanelBackground() }
         .preferredColorScheme(.dark)
         .environment(\.colorScheme, .dark)
         .background { settingsShortcut }
@@ -43,6 +44,9 @@ struct ChatView: View {
                 .padding(.vertical, 12)
             }
             .defaultScrollAnchor(.bottom)
+            .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 1 } action: { _, v in
+                scrolled = v
+            }
             .safeAreaInset(edge: .top, spacing: 0) { header(doc) }
             .safeAreaInset(edge: .bottom, spacing: 0) { composer }
             .onChange(of: store.messages.last?.text) { proxy.scrollTo("bottom", anchor: .bottom) }
@@ -75,8 +79,9 @@ struct ChatView: View {
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
         }
-        .background(.bar)
-        .overlay(alignment: .bottom) { Divider() }
+        .background { PanelBackground() }
+        .overlay(alignment: .bottom) { Divider().opacity(scrolled ? 1 : 0) }
+        .animation(.easeOut(duration: 0.15), value: scrolled)
     }
 
     private var modelMenu: some View {
@@ -319,6 +324,14 @@ struct ThinkingIndicator: View {
                 } animation: { _ in .easeInOut(duration: 0.8) }
         }
         .font(.callout)
+    }
+}
+
+/// The panel's dark frosted backdrop. Also used under the header so it matches the body
+/// and hides (rather than shows through) content scrolled beneath it.
+struct PanelBackground: View {
+    var body: some View {
+        VisualEffectBackground().overlay(Color.black.opacity(0.4))
     }
 }
 
