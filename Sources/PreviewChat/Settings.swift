@@ -22,7 +22,17 @@ enum ResponseFont: String, CaseIterable, Identifiable {
     }
 }
 
+enum PanelLayout: String, CaseIterable, Identifiable {
+    case portrait, landscape
+
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+    var icon: String { self == .portrait ? "rectangle.portrait" : "rectangle" }
+    var size: CGSize { self == .portrait ? CGSize(width: 440, height: 600) : CGSize(width: 780, height: 520) }
+}
+
 enum Prefs {
+    static let layoutKey = "panelLayout"
     static let fontKey = "responseFont"
     static let sizeKey = "fontSize"
     static let defaultSize: Double = 15
@@ -31,9 +41,16 @@ enum Prefs {
 struct SettingsView: View {
     @AppStorage(Prefs.fontKey) private var font = ResponseFont.sourceSerif
     @AppStorage(Prefs.sizeKey) private var size = Prefs.defaultSize
+    @AppStorage(Prefs.layoutKey) private var layout = PanelLayout.portrait
 
     var body: some View {
         Form {
+            Section("Panel") {
+                Picker("Shape", selection: $layout) {
+                    ForEach(PanelLayout.allCases) { Label($0.title, systemImage: $0.icon).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            }
             Section("Text") {
                 Picker("Response font", selection: $font) {
                     ForEach(ResponseFont.allCases) { Text($0.title).tag($0) }

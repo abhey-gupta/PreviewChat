@@ -4,6 +4,7 @@ struct ChatView: View {
     @EnvironmentObject var store: ChatStore
     @Environment(\.openSettings) private var openSettings
     @AppStorage(Prefs.sizeKey) private var fontSize = Prefs.defaultSize
+    @AppStorage(Prefs.layoutKey) private var layout = PanelLayout.portrait
     @State private var input = ""
     @State private var scrolled = false
     @FocusState private var focused: Bool
@@ -102,6 +103,11 @@ struct ChatView: View {
 
     private func moreMenu(_ doc: PDFInfo) -> some View {
         Menu {
+            Picker("Panel Shape", selection: $layout) {
+                ForEach(PanelLayout.allCases) { Label($0.title, systemImage: $0.icon).tag($0) }
+            }
+            .pickerStyle(.inline)
+            Divider()
             Button("Settings…", systemImage: "gearshape") { showSettings() }
             Button("Show in Finder", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([doc.url]) }
             Divider()
