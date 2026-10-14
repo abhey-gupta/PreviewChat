@@ -4,13 +4,19 @@ import SwiftUI
 /// Inline styling (bold, italic, code, links) is delegated to AttributedString.
 struct MarkdownView: View {
     let text: String
+    @AppStorage(Prefs.fontKey) private var fontChoice = ResponseFont.sourceSerif
+    @AppStorage(Prefs.sizeKey) private var size = Prefs.defaultSize
+
+    private func font(_ scale: CGFloat) -> Font { fontChoice.font(size: CGFloat(size) * scale) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: CGFloat(size) * 0.6) {
             ForEach(Array(MarkdownBlock.parse(text).enumerated()), id: \.offset) { _, block in
                 view(for: block)
             }
         }
+        .font(font(1))
+        .lineSpacing(CGFloat(size) * 0.2)
     }
 
     @ViewBuilder
@@ -18,7 +24,7 @@ struct MarkdownView: View {
         switch block {
         case .heading(let level, let s):
             Text(inline(s))
-                .font(level == 1 ? .title3.bold() : level == 2 ? .headline : .subheadline.bold())
+                .font(font(level == 1 ? 1.35 : level == 2 ? 1.18 : 1.05).weight(.semibold))
                 .padding(.top, 4)
         case .paragraph(let s):
             Text(inline(s))
@@ -34,7 +40,7 @@ struct MarkdownView: View {
             }
         case .code(let s):
             ScrollView(.horizontal, showsIndicators: false) {
-                Text(s).font(.system(.callout, design: .monospaced))
+                Text(s).font(.system(size: CGFloat(size) * 0.85, design: .monospaced))
             }
             .padding(8)
             .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))

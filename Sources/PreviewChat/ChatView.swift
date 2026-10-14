@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ChatView: View {
     @EnvironmentObject var store: ChatStore
+    @Environment(\.openSettings) private var openSettings
+    @AppStorage(Prefs.sizeKey) private var fontSize = Prefs.defaultSize
     @State private var input = ""
     @FocusState private var focused: Bool
 
@@ -14,7 +16,10 @@ struct ChatView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background { VisualEffectBackground().overlay(Color.black.opacity(0.25)) }
+        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)
+        .background { settingsShortcut }
         .onAppear { store.poll(); focused = true }
     }
 
@@ -92,6 +97,7 @@ struct ChatView: View {
 
     private func moreMenu(_ doc: PDFInfo) -> some View {
         Menu {
+            Button("Settings…", systemImage: "gearshape") { showSettings() }
             Button("Show in Finder", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([doc.url]) }
             Divider()
             Button("Quit PreviewChat", systemImage: "power") { NSApp.terminate(nil) }
@@ -101,6 +107,18 @@ struct ChatView: View {
         }
         .menuStyle(.button).buttonStyle(.glass).buttonBorderShape(.circle)
         .menuIndicator(.hidden).fixedSize()
+    }
+
+    /// ⌘, from the panel. Accessory apps have no visible menu bar, so wire it up explicitly.
+    private var settingsShortcut: some View {
+        Button("Settings", action: showSettings)
+            .keyboardShortcut(",", modifiers: .command)
+            .opacity(0).allowsHitTesting(false)
+    }
+
+    private func showSettings() {
+        NSApp.activate()
+        openSettings()
     }
 
     // MARK: Empty states
@@ -168,6 +186,7 @@ struct ChatView: View {
             HStack(alignment: .bottom, spacing: 8) {
                 TextField("Ask anything…", text: $input, axis: .vertical)
                     .textFieldStyle(.plain)
+                    .font(.system(size: fontSize))
                     .lineLimit(1...6)
                     .focused($focused)
                     .onSubmit(submit)
@@ -209,6 +228,7 @@ struct ChatView: View {
 
 struct MessageRow: View {
     let message: Message
+    @AppStorage(Prefs.sizeKey) private var fontSize = Prefs.defaultSize
     var isStreaming = false
     var status: String?
     @State private var hovering = false
@@ -225,6 +245,7 @@ struct MessageRow: View {
         HStack {
             Spacer(minLength: 56)
             Text(message.text)
+                .font(.system(size: fontSize))
                 .textSelection(.enabled)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 13).padding(.vertical, 8)
@@ -242,7 +263,6 @@ struct MessageRow: View {
             } else {
                 MarkdownView(text: message.text)
                     .textSelection(.enabled)
-                    .lineSpacing(2)
                 if isStreaming, let status {
                     ThinkingIndicator(label: status)
                 }
@@ -300,4 +320,18 @@ struct ThinkingIndicator: View {
         }
         .font(.callout)
     }
+}
+
+/// Behind-window blur (dark HUD material), like other menu bar panels.
+struct VisualEffectBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.material = .hudWindow
+        v.blendingMode = .behindWindow
+        v.state = .active
+        v.appearance = NSAppearance(named: .darkAqua)
+        return v
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }

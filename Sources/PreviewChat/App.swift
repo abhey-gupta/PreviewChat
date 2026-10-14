@@ -13,5 +13,9 @@ struct PreviewChatApp: App {
             Image(systemName: store.document == nil ? "doc.text" : "doc.text.fill")
         }
         .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsView()
+        }
     }
 }

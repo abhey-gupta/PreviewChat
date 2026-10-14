@@ -10,6 +10,7 @@
     <key>CFBundleVersion</key><string>1</string>
     <key>LSMinimumSystemVersion</key><string>26.0</string>
     <key>LSUIElement</key><true/>
+    <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>PreviewChat asks Preview which PDF is open so you can chat with it.</string>
 </dict>
