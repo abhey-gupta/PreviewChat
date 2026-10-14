@@ -12,7 +12,7 @@ struct MarkdownView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: CGFloat(size) * 0.6) {
             ForEach(Array(MarkdownBlock.parse(text).enumerated()), id: \.offset) { _, block in
-                view(for: block)
+                view(for: block).fixedSize(horizontal: false, vertical: true)
             }
         }
         .font(font(1))
@@ -23,17 +23,17 @@ struct MarkdownView: View {
     private func view(for block: MarkdownBlock) -> some View {
         switch block {
         case .heading(let level, let s):
-            Text(inline(s))
+            rich((s))
                 .font(font(level == 1 ? 1.35 : level == 2 ? 1.18 : 1.05).weight(.semibold))
                 .padding(.top, 4)
         case .paragraph(let s):
-            Text(inline(s))
+            rich((s))
         case .list(let items):
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text(item.marker).monospacedDigit().foregroundStyle(.secondary)
-                        Text(inline(item.text))
+                        rich((item.text))
                     }
                     .padding(.leading, CGFloat(item.indent) * 14)
                 }
@@ -45,29 +45,28 @@ struct MarkdownView: View {
             .padding(8)
             .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
         case .quote(let s):
-            Text(inline(s))
+            rich((s))
                 .foregroundStyle(.secondary)
                 .padding(.leading, 10)
                 .overlay(alignment: .leading) { Rectangle().fill(.tertiary).frame(width: 3) }
         case .table(let header, let rows):
             ScrollView(.horizontal, showsIndicators: false) {
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
-                    GridRow { ForEach(Array(header.enumerated()), id: \.offset) { Text(inline($0.element)).bold() } }
+                    GridRow { ForEach(Array(header.enumerated()), id: \.offset) { rich(($0.element)).bold() } }
                     Divider()
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                        GridRow { ForEach(Array(row.enumerated()), id: \.offset) { Text(inline($0.element)) } }
+                        GridRow { ForEach(Array(row.enumerated()), id: \.offset) { rich(($0.element)) } }
                     }
                 }
             }
+        case .math(let latex):
+            DisplayMath(latex: latex, size: CGFloat(size))
         case .rule:
             Divider()
         }
     }
 
-    private func inline(_ s: String) -> AttributedString {
-        let opts = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        return (try? AttributedString(markdown: s, options: opts)) ?? AttributedString(s)
-    }
+    private func rich(_ s: String) -> Text { RichText.make(s, size: CGFloat(size)) }
 }
 
 struct ListItem { let indent: Int; let marker: String; let text: String }
@@ -79,6 +78,7 @@ enum MarkdownBlock {
     case code(String)
     case quote(String)
     case table([String], [[String]])
+    case math(String)
     case rule
 
     static func parse(_ text: String) -> [MarkdownBlock] {
@@ -106,6 +106,28 @@ enum MarkdownBlock {
                 }
                 blocks.append(.code(code.joined(separator: "\n")))
                 i += 1
+                continue
+            }
+
+            // Display math: $$ … $$ or \[ … \], single- or multi-line
+            if t.hasPrefix("$$") || t.hasPrefix("\\[") {
+                let close = t.hasPrefix("$$") ? "$$" : "\\]"
+                var body = String(t.dropFirst(2))
+                if let r = body.range(of: close) {
+                    body = String(body[..<r.lowerBound])
+                    i += 1
+                } else {
+                    i += 1
+                    var parts = [body]
+                    while i < lines.count {
+                        let l = lines[i]; i += 1
+                        if let r = l.range(of: close) { parts.append(String(l[..<r.lowerBound])); break }
+                        parts.append(l)
+                    }
+                    body = parts.joined(separator: "\n")
+                }
+                flush()
+                blocks.append(.math(body.trimmingCharacters(in: .whitespacesAndNewlines)))
                 continue
             }
 

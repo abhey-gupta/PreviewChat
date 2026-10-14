@@ -16,5 +16,7 @@ cp .build/release/PreviewChat "$APP/Contents/MacOS/"
 cp Info.plist "$APP/Contents/"
 mkdir -p "$APP/Contents/Resources"
 cp -R Resources/Fonts "$APP/Contents/Resources/"
+# SwiftPM resource bundles (e.g. SwiftMath's math fonts); Bundle.module looks in Contents/Resources
+cp -R .build/release/*.bundle "$APP/Contents/Resources/"
 codesign --force --sign - "$APP"
 echo "Built $APP"
