@@ -195,8 +195,6 @@ struct ChatView: View {
             }
             .padding(.horizontal, 12).padding(.vertical, 10)
         }
-        .background(.bar)
-        .overlay(alignment: .top) { Divider() }
         .animation(.smooth(duration: 0.2), value: store.busy)
     }
 
