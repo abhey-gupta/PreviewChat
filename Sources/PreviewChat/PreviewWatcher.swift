@@ -31,4 +31,20 @@ enum PreviewWatcher {
     }
 
     static var lastError: String?
+
+    /// Current page from Preview's window title ("file.pdf – Page 44 of 79") via Accessibility.
+    /// Nil without Accessibility permission (prompts once) or if the title has no page.
+    static func currentPage() -> Int? {
+        guard AXIsProcessTrustedWithOptions(promptOnce) else { return nil }
+        promptOnce = nil
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first else { return nil }
+        var win: AnyObject?, title: AnyObject?
+        guard AXUIElementCopyAttributeValue(AXUIElementCreateApplication(app.processIdentifier), kAXMainWindowAttribute as CFString, &win) == .success,
+              AXUIElementCopyAttributeValue(win as! AXUIElement, kAXTitleAttribute as CFString, &title) == .success,
+              let title = title as? String,
+              let m = title.firstMatch(of: #/(\d+)\D+\d+\s*$/#) else { return nil }
+        return Int(m.1)
+    }
+
+    private static var promptOnce: CFDictionary? = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
 }

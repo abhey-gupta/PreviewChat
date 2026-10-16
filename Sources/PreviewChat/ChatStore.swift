@@ -60,6 +60,9 @@ final class ChatStore: ObservableObject {
         var convo = conversations[key] ?? Conversation()
 
         var prompt = text
+        if let page = PreviewWatcher.currentPage() {
+            prompt = "<viewing page=\"\(page)\"/> (page the user has open in Preview right now)\n\n" + prompt
+        }
         if convo.sessionID == nil {
             let note = doc.truncated ? " truncated=\"true\" (text cut off; use Read for later pages)" : ""
             let body = doc.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -69,7 +72,7 @@ final class ChatStore: ObservableObject {
                 \(body)
                 </document>
 
-                \(text)
+                \(prompt)
                 """
         }
 
