@@ -8,7 +8,7 @@ if [ -z "${DEVELOPER_DIR:-}" ]; then
     [ -d "$x" ] && export DEVELOPER_DIR="$x/Contents/Developer" && break
   done
 fi
-swift build -c release
+swift build -c release --build-system native
 APP=build/PreviewChat.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"

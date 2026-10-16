@@ -5,9 +5,10 @@ struct ChatView: View {
     @Environment(\.openSettings) private var openSettings
     @AppStorage(Prefs.sizeKey) private var fontSize = Prefs.defaultSize
     @AppStorage(Prefs.layoutKey) private var layout = PanelLayout.portrait
-    @State private var input = ""
-    @State private var scrolled = false
+    @ViewState private var input = ""
+    @ViewState private var scrolled = false
     @FocusState private var focused: Bool
+    @ViewState private var visible = false
 
     var body: some View {
         Group {
@@ -22,6 +23,8 @@ struct ChatView: View {
         .preferredColorScheme(.dark)
         .environment(\.colorScheme, .dark)
         .background { settingsShortcut }
+        .background { WindowVisibility(visible: $visible) }
+        .environment(\.panelVisible, visible)
         .onAppear { store.poll(); focused = true }
     }
 
@@ -146,7 +149,7 @@ struct ChatView: View {
             VStack(spacing: 6) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 30)).foregroundStyle(.tint)
-                    .symbolEffect(.breathe, options: .repeat(.continuous))
+                    .symbolEffect(.breathe, options: .repeat(.continuous), isActive: visible)
                 Text("Ask about this PDF").font(.title3.weight(.semibold))
                 Text("Claude has read every page.").font(.callout).foregroundStyle(.secondary)
             }
@@ -242,8 +245,8 @@ struct MessageRow: View {
     @AppStorage(Prefs.sizeKey) private var fontSize = Prefs.defaultSize
     var isStreaming = false
     var status: String?
-    @State private var hovering = false
-    @State private var copied = false
+    @ViewState private var hovering = false
+    @ViewState private var copied = false
 
     var body: some View {
         switch message.role {
@@ -317,19 +320,76 @@ struct MessageRow: View {
 
 struct ThinkingIndicator: View {
     let label: String
+    @Environment(\.panelVisible) private var visible
 
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "sparkle")
                 .foregroundStyle(.tint)
-                .symbolEffect(.rotate, options: .repeat(.continuous))
-            Text(label.trimmingCharacters(in: CharacterSet(charactersIn: "…")))
+                .symbolEffect(.rotate, options: .repeat(.continuous), isActive: visible)
+            let text = Text(label.trimmingCharacters(in: CharacterSet(charactersIn: "…")))
                 .foregroundStyle(.secondary)
-                .phaseAnimator([0.4, 1.0]) { content, phase in
+            if visible {
+                text.phaseAnimator([0.4, 1.0]) { content, phase in
                     content.opacity(phase)
                 } animation: { _ in .easeInOut(duration: 0.8) }
+            } else {
+                text
+            }
         }
         .font(.callout)
+    }
+}
+
+/// `@State` is a macro in the macOS 27 SDK whose plugin ships only with Xcode; this alias
+/// names the same property wrapper so the app also builds with the Command Line Tools.
+typealias ViewState<Value> = SwiftUI.State<Value>
+
+private struct PanelVisibleKey: EnvironmentKey { static let defaultValue = false }
+
+extension EnvironmentValues {
+    /// False while the menu bar panel is closed, so continuous animations stop redrawing it.
+    var panelVisible: Bool {
+        get { self[PanelVisibleKey.self] }
+        set { self[PanelVisibleKey.self] = newValue }
+    }
+}
+
+/// Tracks whether the hosting window is on screen. MenuBarExtra only orders its window out
+/// when closed, so SwiftUI would otherwise keep running repeating animations forever.
+struct WindowVisibility: NSViewRepresentable {
+    @Binding var visible: Bool
+
+    func makeNSView(context: Context) -> NSView { Tracker { visible = $0 } }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    final class Tracker: NSView {
+        let onChange: (Bool) -> Void
+        private var observer: NSObjectProtocol?
+
+        init(onChange: @escaping (Bool) -> Void) {
+            self.onChange = onChange
+            super.init(frame: .zero)
+        }
+        required init?(coder: NSCoder) { fatalError() }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let observer { NotificationCenter.default.removeObserver(observer) }
+            observer = nil
+            guard let window else { return onChange(false) }
+            observer = NotificationCenter.default.addObserver(
+                forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main
+            ) { [weak self] _ in self?.report() }
+            report()
+        }
+
+        private func report() {
+            let v = window?.occlusionState.contains(.visible) ?? false
+            DispatchQueue.main.async { self.onChange(v) }
+        }
+
+        deinit { if let observer { NotificationCenter.default.removeObserver(observer) } }
     }
 }
 

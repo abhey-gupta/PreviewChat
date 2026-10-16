@@ -37,7 +37,8 @@ final class ChatStore: ObservableObject {
 
     func poll() {
         let url = PreviewWatcher.frontPDF()
-        watcherError = PreviewWatcher.lastError
+        // Assign only on change: every @Published write re-renders the panel.
+        if watcherError != PreviewWatcher.lastError { watcherError = PreviewWatcher.lastError }
         guard let url, url != document?.url else { return }
         Task.detached(priority: .userInitiated) {
             guard let info = PDFText.load(url) else { return }
