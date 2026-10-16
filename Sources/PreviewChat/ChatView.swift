@@ -7,6 +7,8 @@ struct ChatView: View {
     @AppStorage(Prefs.layoutKey) private var layout = PanelLayout.portrait
     @ViewState private var input = ""
     @ViewState private var scrolled = false
+    // Edge-based scrolling works even when the LazyVStack's tail isn't laid out yet (id-based scrollTo doesn't).
+    @ViewState private var position = ScrollPosition(edge: .bottom)
     @FocusState private var focused: Bool
     @ViewState private var visible = false
 
@@ -31,32 +33,30 @@ struct ChatView: View {
     // MARK: Conversation
 
     private func conversation(_ doc: PDFInfo) -> some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 18) {
-                    if store.messages.isEmpty {
-                        suggestions.padding(.top, 36)
-                    }
-                    ForEach(store.messages) { msg in
-                        MessageRow(message: msg, isStreaming: store.busy && msg.id == store.messages.last?.id,
-                                   status: store.status)
-                            .id(msg.id)
-                    }
-                    Color.clear.frame(height: 1).id("bottom")
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 18) {
+                if store.messages.isEmpty {
+                    suggestions.padding(.top, 36)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                ForEach(store.messages) { msg in
+                    MessageRow(message: msg, isStreaming: store.busy && msg.id == store.messages.last?.id,
+                               status: store.status)
+                        .id(msg.id)
+                }
             }
-            .defaultScrollAnchor(.bottom)
-            .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 1 } action: { _, v in
-                scrolled = v
-            }
-            .safeAreaInset(edge: .top, spacing: 0) { header(doc) }
-            .safeAreaInset(edge: .bottom, spacing: 0) { composer }
-            .onChange(of: store.messages.last?.text) { proxy.scrollTo("bottom", anchor: .bottom) }
-            .onChange(of: store.messages.count) {
-                withAnimation(.smooth) { proxy.scrollTo("bottom", anchor: .bottom) }
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .defaultScrollAnchor(.bottom)
+        .scrollPosition($position)
+        .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 1 } action: { _, v in
+            scrolled = v
+        }
+        .safeAreaInset(edge: .top, spacing: 0) { header(doc) }
+        .safeAreaInset(edge: .bottom, spacing: 0) { composer }
+        .onChange(of: store.messages.last?.text) { position.scrollTo(edge: .bottom) }
+        .onChange(of: store.messages.count) {
+            withAnimation(.smooth) { position.scrollTo(edge: .bottom) }
         }
     }
 
