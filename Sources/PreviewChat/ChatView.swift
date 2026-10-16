@@ -78,7 +78,7 @@ struct ChatView: View {
                     Image(systemName: "square.and.pencil").frame(width: 18, height: 18)
                 }
                 .buttonStyle(.glass).buttonBorderShape(.circle)
-                .help("New Chat").disabled(store.busy || store.messages.isEmpty)
+                .help("New Chat (⌘N)").keyboardShortcut("n").disabled(store.busy || store.messages.isEmpty)
                 moreMenu(doc)
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
