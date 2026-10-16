@@ -203,7 +203,15 @@ struct ChatView: View {
                     .font(.system(size: fontSize))
                     .lineLimit(1...6)
                     .focused($focused)
-                    .onSubmit(submit)
+                    .onKeyPress(.return, phases: .down) { press in
+                        // Field editor maps Shift+Return to submit; insert newline at cursor instead.
+                        if press.modifiers.contains(.shift) {
+                            NSApp.sendAction(#selector(NSResponder.insertNewlineIgnoringFieldEditor(_:)), to: nil, from: nil)
+                        } else {
+                            submit()
+                        }
+                        return .handled
+                    }
                     .padding(.horizontal, 14).padding(.vertical, 9)
                     .glassEffect(.regular, in: .rect(cornerRadius: 18))
 
